@@ -59,7 +59,7 @@ def delete_todo(todo_id: int, db: Session = Depends(get_db)):
 def read_todos(db: Session = Depends(get_db)):
      todos = db.query(models.Todo).all()
      return todos
-
+#testing
 
 
 
