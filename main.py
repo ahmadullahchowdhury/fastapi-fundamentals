@@ -17,16 +17,7 @@ def get_db():
         yield db
     finally:
         db.close()
-# Middleware for request timing
-@app.middleware("http")
-async def add_process_time_header(request, call_next):
-    import time
-    start_time = time.time()
-    response = await call_next(request)
-    process_time = time.time() - start_time
-    response.headers["X-Process-Time"] = str(process_time)
-    print(f"Request to {request.url.path} took {process_time} seconds")
-    return response
+
 
 # Custom exception handler
 @app.exception_handler(HTTPException)
@@ -55,34 +46,7 @@ async def create_todo_background(todo: schemas.TodoCreate, background_tasks: Bac
     return {"message": "Todo created, processing in background"}
 
 # Rate limiting
-from fastapi import Request
-from fastapi.responses import JSONResponse
-import time
 
-requests = {}
-RATE_LIMIT = 5  # requests
-RATE_TIME = 10  # seconds
-
-@app.middleware("http")
-async def rate_limit(request: Request, call_next):
-    client_ip = request.client.host
-    if client_ip in requests:
-        if len(requests[client_ip]) >= RATE_LIMIT:
-            # Remove old requests
-            current_time = time.time()
-            requests[client_ip] = [req_time for req_time in requests[client_ip] 
-                                 if current_time - req_time < RATE_TIME]
-            if len(requests[client_ip]) >= RATE_LIMIT:
-                return JSONResponse(
-                    status_code=429,
-                    content={"message": "Too many requests"}
-                )
-    else:
-        requests[client_ip] = []
-    
-    requests[client_ip].append(time.time())
-    response = await call_next(request)
-    return response
 
 @app.post("/todos/", response_model=schemas.Todo)
 def create_todo(todo: schemas.TodoCreate, db: Session = Depends(get_db)):
